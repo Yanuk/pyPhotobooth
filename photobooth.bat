@@ -1,1 +1,1 @@
-python photobooth\photobooth.py %1
+python photobooth/photobooth.py %1

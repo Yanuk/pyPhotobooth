@@ -14,7 +14,7 @@ class HttpRoot(object):
         self.photo_dir = photo_dir
         self.booth_stats = booth_stats
         self.cmdQ = cmdQ
-        self.abs_photo_dir = "%s\\%s" % (os.path.join(os.path.abspath(os.curdir)), photo_dir)
+        self.abs_photo_dir = "%s/%s" % (os.path.join(os.path.abspath(os.curdir)), photo_dir)
 
         self.last_latestrand = None
         self.last_rand = None
@@ -26,7 +26,7 @@ class HttpRoot(object):
     # Serve the given image file
     @cherrypy.expose
     def picture(self, name):
-        return serve_file("%s\\%s" % (self.abs_photo_dir, name))
+        return serve_file("%s/%s" % (self.abs_photo_dir, name))
 
     # Return latest image(s)
     @cherrypy.expose
@@ -57,7 +57,7 @@ class HttpRoot(object):
             while randChoice == self.last_rand:
                 randChoice = random.choice(images)                
             self.last_rand = randChoice
-            return serve_file("%s\\%s" % (self.abs_photo_dir, randChoice))
+            return serve_file("%s/%s" % (self.abs_photo_dir, randChoice))
         elif len(images) == 1:
             return self.latest(1)
         else:
@@ -72,7 +72,7 @@ class HttpRoot(object):
             return self.rand();
         else:
             self.last_latestrand = latestImg
-            return serve_file("%s\\%s" % (self.abs_photo_dir, latestImg))
+            return serve_file("%s/%s" % (self.abs_photo_dir, latestImg))
 
     # Return photobooth stats
     @cherrypy.expose

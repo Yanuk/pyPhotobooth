@@ -24,7 +24,7 @@ def PrintUsage():
            <settings_ini> = INI configuration file
 
        Example: 
-           photobooth.bat event1conf\settings.ini
+           photobooth.bat event1conf/settings.ini
 """
 
 ##############################################################################
@@ -110,7 +110,7 @@ def StopSession(screen, capturedImages, event_dir):
 
 ##############################################################################
 def ProcessImages(imgs, dest_dir, filename):
-    dest_file = "%s\\%s" % (dest_dir, filename)
+    dest_file = "%s/%s" % (dest_dir, filename)
     qrImg = None
 
     # Create QR code if configured
@@ -169,7 +169,7 @@ logger.info("PROGRAM START")
 if not os.path.exists(config.PHOTO_DIRECTORY):
     logger.error("Base directory does not exist: %s" % (config.PHOTO_DIRECTORY))
     sys.exit(3)
-event_dir = "%s\\%s" % (config.PHOTO_DIRECTORY, config.EVENT_NAME)
+event_dir = "%s/%s" % (config.PHOTO_DIRECTORY, config.EVENT_NAME)
 if not os.path.exists(event_dir):
     os.makedirs(event_dir)
 
