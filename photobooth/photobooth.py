@@ -1,5 +1,5 @@
 import os
-import cv 
+import cv
 import sys
 import gui
 import config
@@ -11,6 +11,7 @@ import qrcode
 import server.http 
 import stats
 import Queue
+import status
     
 ##############################################################################
 EVT_PICTURE   = pygame.USEREVENT+1
@@ -78,11 +79,14 @@ def StartSession():
     gui.bg_redraw(screen)
     gui.show_all_thumbnail_markers(screen)
     gui.show_thumbnail_marker(screen, 0, config.MARKER_SELECT_COLOR)
-    gui.display_delay(screen, "Get Ready...", countdown_timer)
+    gui.display_delay(screen, "Photo dans", countdown_timer)
     pygame.display.flip()
 
 ##############################################################################
 def StopSession(screen, capturedImages, event_dir):
+    global last_picture_file
+    global last_picture
+
     pygame.time.set_timer(EVT_PICTURE, 0)
     pygame.time.set_timer(EVT_COUNTDOWN, 0)
     
@@ -90,6 +94,9 @@ def StopSession(screen, capturedImages, event_dir):
     filename = datetime.datetime.now().strftime("%Y%m%d_%H%M%S.jpg")
     (finalImg, dest_file) = ProcessImages(capturedImages, event_dir, filename)
     
+    last_picture_file = dest_file
+    last_picture = finalImg
+
     # Send photobooth picture to printer
     if config.PRINT_COPIES > 0:
         numCopies = min(config.PRINT_COPIES, 3) # just in case 
@@ -101,7 +108,9 @@ def StopSession(screen, capturedImages, event_dir):
     pygame.time.wait(800)
     DisplayFinalPicture(screen, finalImg)
     pygame.time.wait(config.FINAL_IMG_SHOW_DELAY);
+    
 
+def ClearEvents(screen):
     # Reset event timers and GUI for next session
     gui.display_title_screen(screen, config.TITLE1, config.TITLE2, config.PRESS_BTN_TEXT)
     pygame.time.set_timer(EVT_BTN_BLINK, config.BTN_BLINK_RATE)
@@ -115,7 +124,7 @@ def ProcessImages(imgs, dest_dir, filename):
 
     # Create QR code if configured
     if config.QR_CODE:
-        qrcode_url = "%s/%s/%s" % (config.QR_BASE_URL, config.EVENT_NAME, filename[:-4])
+        qrcode_url = config.QR_BASE_URL #"%s/%s/%s" % (config.QR_BASE_URL, config.EVENT_NAME, filename[:-4])
         qrImg = CreateQrCode(qrcode_url, config.QR_CODE_COLOR)
         logger.info("QR code: %s" % (qrcode_url))
 
@@ -141,7 +150,7 @@ def DisplayFinalPicture(screen, finalPic):
     pg_img = pygame.image.frombuffer( showImg.tostring(), cv.GetSize(showImg), "RGB" )
 
     screen.blit( pg_img, (int((screen.get_width() - pg_img.get_width())/2), config.FINAL_IMG_DISPLAY_POS_TOP))
-    gui.display_done_text(screen, "All Done!", "Your pictures are being printed")
+    gui.display_done_text(screen, "Magnifique !", "Imprimer la photo ?")
     pygame.display.flip()
 
 ##############################################################################
@@ -150,11 +159,14 @@ winpos_y = 30
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (winpos_x,winpos_y)
 
 # Read config settings
+settings_file = ""
 if len(sys.argv) != 2:
     PrintUsage()
-    sys.exit(1)   
+    settings_file = "eventconf\settings.ini" 
+    print "Falling back to %s" % (settings_file)
+else:
+    settings_file = sys.argv[1]
 
-settings_file = sys.argv[1]
 if not os.path.exists(settings_file):
     print "Settings file does not exist: %s" % (settings_file)
     sys.exit(2)
@@ -174,7 +186,7 @@ if not os.path.exists(event_dir):
     os.makedirs(event_dir)
 
 # Get camera handle
-camera  = cv.CaptureFromCAM(0)
+camera  = cv.CaptureFromCAM(-1)
 cv.SetCaptureProperty(camera, cv.CV_CAP_PROP_FRAME_WIDTH, config.CAM_CAPTURE_WIDTH)
 cv.SetCaptureProperty(camera, cv.CV_CAP_PROP_FRAME_HEIGHT, config.CAM_CAPTURE_HEIGHT)
 
@@ -215,7 +227,11 @@ filterFn = None
 on_exit = False
 maintenance_mode = False
 capture_in_progress = False
+ask_if_print = False
 countdown_timer = 0
+last_picture = ""
+last_picture_file = ""
+status.STATUS = 'Idle'
 
 # Main processing loop
 while not on_exit :    
@@ -228,7 +244,7 @@ while not on_exit :
             #######################################################
             logger.info("EVT_COUNTDOWN")
             countdown_timer = countdown_timer - 1
-            gui.display_delay(screen, "Get Ready...", countdown_timer)
+            gui.display_delay(screen, "Photo dans", countdown_timer)
             if countdown_timer <= 1:
                 pygame.time.set_timer(EVT_COUNTDOWN, 0)                
         elif event.type == pygame.KEYDOWN:
@@ -240,6 +256,23 @@ while not on_exit :
             if (event.key == pygame.K_ESCAPE or event.key == pygame.K_q):
                 # Quit
                 on_exit = True 
+            elif ask_if_print :
+                if (event.key == pygame.K_y):
+                    ask_if_print = False
+                    status.STATUS = 'Idle'
+                    numCopies = min(config.PRINT_COPIES, 3) # just in case 
+                    for i in range(numCopies):
+                        logger.info("PRINTING %d of %d..." % (i+1, numCopies))
+                        config.PRINT_FUNC(config.PRINTER_NAME, last_picture_file)
+                    gui.bg_redraw(screen)
+                   
+                    pygame.display.flip()
+                    pygame.time.wait(5000)
+                    ClearEvents(screen)
+                elif (event.key == pygame.K_n):
+                    ask_if_print = False
+                    status.STATUS = 'Idle'
+                    ClearEvents(screen)
             elif not capture_in_progress:
                 if (event.key == pygame.K_m):
                     # Toggle maintenance mode
@@ -267,6 +300,7 @@ while not on_exit :
                     elif event.key == pygame.K_SPACE or event.key == pygame.K_p or config.ANY_KEY_STARTS:   
                         # Start picture taking session
                         capture_in_progress = True
+                        status.STATUS = 'Picture'
                         capturedImages = []
                         StartSession()
         elif event.type == EVT_PICTURE:
@@ -283,13 +317,18 @@ while not on_exit :
                 # Done taking pictures, stop current session                
                 capture_in_progress = False
                 StopSession(screen, capturedImages, event_dir)
+                if config.PRINT_COPIES > 0 :
+                    ask_if_print = True
+                    status.STATUS = 'Askprint'
+                else :
+                    ClearEvents(screen)
             else:
                 # Reset event timers and GUI for next picture in current session
                 pygame.time.set_timer(EVT_COUNTDOWN, 0)
                 countdown_timer = config.DELAY_SECS
                 pygame.time.set_timer(EVT_COUNTDOWN, 1000)
                 gui.show_thumbnail_marker(screen, len(capturedImages), config.MARKER_SELECT_COLOR)
-                gui.display_delay(screen, "Get Ready...", countdown_timer)
+                gui.display_delay(screen, "Photo dans", countdown_timer)
         elif event.type == EVT_BTN_BLINK:
             ####################################################
             # Blink press button text
@@ -321,14 +360,22 @@ while not on_exit :
             elif cmd == "RESUME":
                 # Resume normal photobooth operation
                 SetMaintenanceMode(False)
+            elif cmd == "TAKEPICTURE":
+                # Start picture taking session
+                        capture_in_progress = True
+                        status.STATUS = 'Picture'
+                        capturedImages = []
+                        StartSession()
             else:
                 # Unknown command
                 logger.warn("Unknown HTTP_CMD [%s]" % (cmd))
         except Queue.Empty:
             pass
 
+    http_server.photostatus = capture_in_progress
+
     # Capture/process frame
-    if not (on_exit or maintenance_mode):        
+    if not (on_exit or maintenance_mode or ask_if_print):        
         # Grab a frame
         frame = cv.QueryFrame(camera)
 
@@ -342,7 +389,8 @@ while not on_exit :
 
         # Update frame
         gui.show_frame(screen, cropFrame, config.CAM_FRAME_SIZE, config.CAM_BORDER_WIDTH, config.CAM_BORDER_COLOR)
-        
+    elif ask_if_print :
+        DisplayFinalPicture(screen, last_picture)
     # Delay per FPS setting
     pygame.time.delay( int( 1000.0 / config.FPS ) )
 

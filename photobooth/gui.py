@@ -162,6 +162,23 @@ def display_done_text(screen, line1, line2):
     
     line2Text = font.render(line2, 1, config.TITLE_COLOR)
     display_centered_text(screen, pos_Y + 100, line2Text)
+
+##############################################################################
+def display_info_text(screen, line1, line2, line3):    
+    lrg_font = pygame.font.SysFont(config.TITLE_FONT, config.LARGE_FONT_SIZE)
+    font = pygame.font.SysFont(config.TITLE_FONT, config.MEDIUM_FONT_SIZE)
+    
+    #pos_Y = screen.get_rect().height * 0
+    pos_Y = 50
+
+    line1Text = lrg_font.render(line1, 1, config.TITLE_COLOR)
+    display_centered_text(screen, pos_Y, line1Text)
+    
+    line2Text = font.render(line2, 1, config.TITLE_COLOR)
+    display_centered_text(screen, pos_Y + 200, line2Text)
+
+    line3Text = font.render(line3, 1, config.TITLE_COLOR)
+    display_centered_text(screen, pos_Y + 300, line3Text)
        
 ##############################################################################
 def display_delay(screen, line_text, secs_left):
@@ -184,8 +201,8 @@ def display_delay(screen, line_text, secs_left):
         
 ##############################################################################
 def show_thumbnail(screen, img, i):
-    th_width = int(img.width * config.THUMBNAIL_SIZE)
-    th_height = int(img.height * config.THUMBNAIL_SIZE)
+    th_width = int(img.width * 1.5 * config.THUMBNAIL_SIZE)
+    th_height = int(img.height * 1.5 * config.THUMBNAIL_SIZE)
     
     thumbImg = cv.CreateImage((th_width, th_height), img.depth, img.nChannels)
     cv.Resize(img, thumbImg)                
@@ -229,7 +246,7 @@ def crop_image(img, region):
 
 ##############################################################################
 def show_frame(screen, takeImg, shrink, border_width, border_color):
-    display_size = (int(takeImg.width * shrink), int(takeImg.height * shrink))
+    display_size = (int(takeImg.width * 1.5 * shrink), int(takeImg.height * 1.5 * shrink))
     matImg = cv.CreateImage(display_size, takeImg.depth, takeImg.nChannels)
     cv.Resize(takeImg, matImg)
     cv.CvtColor(matImg, matImg, cv.CV_BGR2RGB)

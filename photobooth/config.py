@@ -27,7 +27,7 @@ THUMBNAIL_Y_POS = CAM_FRAME_POS_TOP - CAM_BORDER_WIDTH # absolute
 THUMBNAIL_SIZE = 0.25 # percent of capture frame width/height
 
 PRINT_COPIES = 0
-PRINTER_NAME = "Canon MG5300 series Printer"
+PRINTER_NAME = "PDF"
 PRINT_PKG = "print"
 PRINT_MODULE = "winPrint"
 PRINT_FUNCNAME = "print_image"

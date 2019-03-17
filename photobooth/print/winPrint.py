@@ -74,8 +74,11 @@ def print_image(printer_name, file_name):
     scaled_width, scaled_height = [int (scale * i) for i in bmp.size]
     x1 = int ((printer_size[0] - scaled_width) / 2)
     y1 = int ((printer_size[1] - scaled_height) / 2)
-    x2 = x1 + scaled_width
-    y2 = y1 + scaled_height
+
+    x1 = x1 - 100
+    #print in A5
+    x2 = x1 + (scaled_width)
+    y2 = y1 + (scaled_height)
     dib.draw (hDC.GetHandleOutput (), (x1, y1, x2, y2))
 
     hDC.EndPage ()
